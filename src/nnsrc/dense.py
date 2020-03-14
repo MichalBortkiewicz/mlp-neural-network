@@ -25,8 +25,7 @@ class NeuralNetwork:
         :param problem:
         """
 
-        #TODO: asserts
-
+        # TODO: asserts
 
         self.seed = seed
         self.problem = problem
@@ -57,12 +56,11 @@ class NeuralNetwork:
         """
         Dense (MLP) layer
         """
-        __slots__ = ['input_dim', 'output_dim', 'act_func', 'name', 'weights', 'bias']
+        __slots__ = ['input_dim', 'output_dim', 'act_func', 'name', 'weights', 'bias', 'activation']
 
         def __init__(self, input_dim, output_dim, act_func, name):
 
-            #TODO: asserts
-
+            # TODO: asserts
             self.name = name
             self.act_func = act_func
             self.output_dim = output_dim
@@ -71,25 +69,69 @@ class NeuralNetwork:
             if name == 'Dense_0':
                 self.weights = np.eye(input_dim) # input and output dim should be the same in input layer
                 self.bias = np.random.randn(self.output_dim, 1) * 0
-
             else:
                 self.weights = np.random.rand(self.output_dim, self.input_dim) * 0.1
                 self.bias = np.random.randn(self.output_dim, 1) * 0.1
 
-    def forw_prop(self):
-        pass
+            self.bias = self.bias.reshape((self.bias.shape[0], ))
 
-    def back_prop(self):
+            self.activation = NeuralNetwork.relu
+            if self.act_func is "relu":
+                self.activation = NeuralNetwork.relu
+            elif self.act_func is "sigmoid":
+                self.activation = NeuralNetwork.sigmoid
+            else:
+                raise Exception('Non-supported activation function')
+
+        def forward_propagation(self, A_prev):
+            Z_curr = np.dot(self.weights, A_prev) + self.bias
+            return self.activation(Z_curr), Z_curr  # vectors
+
+    def full_forward_propagation(self, X):
+        cache = {}
+        A_curr = X
+
+        for i, layer in enumerate(self.layers):
+            A_prev = A_curr
+
+            A_curr, Z_curr = layer.forward_propagation(A_prev)
+
+            cache["A" + str(i)] = A_prev
+            cache["Z" + str(i)] = Z_curr
+
+        return A_curr, cache
+
+
+    def full_backward_propagation(self):
         pass
 
     def predict(self):
         pass
 
     def train(self):
-       pass
+        pass
 
+
+    @staticmethod
+    def sigmoid(Z):
+        return 1 / (1 + np.exp(-Z))
+
+    @staticmethod
+    def relu(Z):
+        return np.maximum(0, Z)
+
+    @staticmethod
+    def sigmoid_backward(dA, Z):
+        sig = NeuralNetwork.sigmoid(Z)
+        return dA * sig * (1 - sig)
+
+    @staticmethod
+    def relu_backward(dA, Z):
+        dZ = np.array(dA, copy=True)
+        dZ[Z <= 0] = 0;
+        return dZ;
 
 #%%
 nn = NeuralNetwork(seed=1, n_layers=3,
-                   n_neurons_per_layer=[2, 4, 1], act_funcs='sigmoid', bias=True, n_batch=32,
+                   n_neurons_per_layer=[2, 4, 1], act_funcs=['sigmoid', 'sigmoid', 'sigmoid'], bias=True, n_batch=32,
                    n_epochs=10, alpha=0.007, beta=0.9, problem='classification')
