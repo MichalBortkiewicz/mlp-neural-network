@@ -96,7 +96,7 @@ class NeuralNetwork:
 
             A_curr, Z_curr = layer.forward_propagation(A_prev)
 
-            cache["A" + str(i)] = A_prev
+            cache["A" + str(i)] = A_curr
             cache["Z" + str(i)] = Z_curr
 
         return A_curr, cache
@@ -128,10 +128,11 @@ class NeuralNetwork:
     @staticmethod
     def relu_backward(dA, Z):
         dZ = np.array(dA, copy=True)
-        dZ[Z <= 0] = 0;
-        return dZ;
+        dZ[Z <= 0] = 0
+        return dZ
 
 #%%
 nn = NeuralNetwork(seed=1, n_layers=3,
                    n_neurons_per_layer=[2, 4, 1], act_funcs=['sigmoid', 'sigmoid', 'sigmoid'], bias=True, n_batch=32,
                    n_epochs=10, alpha=0.007, beta=0.9, problem='classification')
+
