@@ -151,11 +151,14 @@ class NeuralNetwork:
             # step forward
             Y_hat, cache = self.full_forward_propagation(X)
 
-            cost = NeuralNetwork.get_cost_value(Y_hat, Y)
-            cost_history.append(cost)
-            accuracy = NeuralNetwork.get_accuracy_value(Y_hat, Y)
-            #print(accuracy)
-            accuracy_history.append(accuracy)
+            if self.problem == 'regression':
+                pass
+            elif self.problem == 'classification':
+                cost = NeuralNetwork.get_cost_value(Y_hat, Y)
+                cost_history.append(cost)
+                accuracy = NeuralNetwork.get_accuracy_value(Y_hat, Y)
+                #print(accuracy)
+                accuracy_history.append(accuracy)
             grads_values = self.full_backward_propagation(Y_hat, Y, cache)
 
             self.update(grads_values, alpha)
@@ -210,7 +213,6 @@ class NeuralNetwork:
 
 
 
-#%%
 # TODO: learning rate, epochs etc should given in constructor
 """
 nn = NeuralNetwork(seed=1, n_layers=3,
@@ -219,21 +221,18 @@ nn = NeuralNetwork(seed=1, n_layers=3,
                    problem='classification')
 """
 
-#%%
 # nn.train(np.asanyarray([[0, 1], [0, 2], [1, 0]]).T, np.asanyarray([1, 1, 0]).T.reshape((3, )), epochs=1000, alpha=0.1)
 # nn.train(np.asanyarray([[0, 1], [0, 2], [1, 0], [-0.2, 1.5]]).T, np.asanyarray([1, 1, 0, 1]).T.reshape((4, )), epochs=100000, alpha=0.01)
 # nn.train(np.asanyarray([[0.2, 0.1], [0.1, 0.7]]).T, np.asanyarray([1, 0]).T.reshape((2, )), epochs=1000, alpha=0.1)
 # nn.train(np.asanyarray([[0.2, 0.1]]).T, np.asanyarray([1]).T.reshape((1, )), epochs=1000, alpha=0.1)
 
 
-#%%
+## classification
 data = pd.read_csv('../data/classification/data.simple.test.100.csv')
 
-#%%
 X = data[["x", "y"]].values
 y = data["cls"].values
 
-#%%
 nn2 = NeuralNetwork(seed=1, n_layers=4,
                     n_neurons_per_layer=[2, 10,  100, 1], act_funcs=['sigmoid', 'sigmoid', 'sigmoid', 'sigmoid'],
                     bias=True, problem='classification')
@@ -241,6 +240,20 @@ nn2 = NeuralNetwork(seed=1, n_layers=4,
 for layer in nn2.layers:
     print(layer.name, layer.input_dim, layer.output_dim)
 
-#%%
 nn2.train(X.T, y, 2000, 0.7)
 
+
+## regression
+data = pd.read_csv('../data/regression/data.activation.test.100.csv')
+
+X = data["x"].values
+y = data["y"].values
+
+nn2 = NeuralNetwork(seed=1, n_layers=4,
+                    n_neurons_per_layer=[2, 10,  100, 1], act_funcs=['sigmoid', 'sigmoid', 'sigmoid', 'sigmoid'],
+                    bias=True, problem='regression')
+
+for layer in nn2.layers:
+    print(layer.name, layer.input_dim, layer.output_dim)
+
+nn2.train(X.T, y, 2000, 0.7)
