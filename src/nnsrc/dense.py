@@ -45,21 +45,22 @@ class NeuralNetwork:
             else:
                 input_dim = self.n_neurons_per_layer[i - 1]
 
-            self.layers.append(self.Dense(input_dim, output_dim, act_func, name))
+            self.layers.append(self.Dense(input_dim, output_dim, act_func, name, bias))
 
     class Dense:
         """
         Dense (MLP) layer
         """
-        __slots__ = ['input_dim', 'output_dim', 'act_func', 'name', 'weights', 'bias', 'activation', 'dactivation']
+        __slots__ = ['input_dim', 'output_dim', 'act_func', 'name', 'weights', 'bias', 'activation', 'dactivation', 'use_bias']
 
-        def __init__(self, input_dim, output_dim, act_func, name):
+        def __init__(self, input_dim, output_dim, act_func, name, use_bias=True):
 
             # TODO: asserts
             self.name = name
             self.act_func = act_func
             self.output_dim = output_dim
             self.input_dim = input_dim
+            self.use_bias = use_bias
 
             if name == 'Dense_0':
                 self.weights = np.eye(input_dim) # input and output dim should be the same in input layer
@@ -78,11 +79,16 @@ class NeuralNetwork:
             elif self.act_func == "sigmoid":
                 self.activation = NeuralNetwork.sigmoid
                 self.dactivation = NeuralNetwork.sigmoid_backward
+            elif self.act_func == "linear":
+                self.activation = NeuralNetwork.linear
+                self.dactivation = NeuralNetwork.linear_backward
             else:
                 raise Exception('Non-supported activation function')
 
         def forward_propagation(self, A_prev):
-            Z_curr = np.dot(self.weights, A_prev) + self.bias[:, np.newaxis]
+            Z_curr = np.dot(self.weights, A_prev)
+            if self.use_bias:
+                Z_curr += self.bias[:, np.newaxis]
             return self.activation(Z_curr), Z_curr  # vectors
 
         def backward_propagation(self, dA_curr, Z_curr, A_prev):
@@ -140,8 +146,9 @@ class NeuralNetwork:
 
         return grads_values
 
-    def predict(self):
-        pass
+    def predict(self, X):
+        out, cache = self.full_forward_propagation(X)
+        return out
 
     def train(self, X, Y, epochs, alpha=0.01, beta=None):
         cost_history = []
@@ -179,6 +186,10 @@ class NeuralNetwork:
         return np.maximum(0, Z)
 
     @staticmethod
+    def linear(Z):
+        return Z.copy()
+
+    @staticmethod
     def sigmoid_backward(dA, Z):
         sig = NeuralNetwork.sigmoid(Z)
         return dA * sig * (1 - sig)
@@ -187,6 +198,17 @@ class NeuralNetwork:
     def relu_backward(dA, Z):
         dZ = np.array(dA, copy=True)
         dZ[Z <= 0] = 0
+        return dZ
+
+    @staticmethod
+    def relu_backward(dA, Z):
+        dZ = np.array(dA, copy=True)
+        dZ[Z <= 0] = 0
+        return dZ
+
+    @staticmethod
+    def linear_backward(dA, Z):
+        dZ = np.array(dA, copy=True)
         return dZ
 
 
@@ -242,18 +264,23 @@ for layer in nn2.layers:
 
 nn2.train(X.T, y, 2000, 0.7)
 
-
+print("CLASSIFICATION DONE")
 ## regression
-data = pd.read_csv('../data/regression/data.activation.test.100.csv')
-
-X = data["x"].values
+data = pd.read_csv('../data/regression/data.activation.train.100.csv')
+X = data[["x"]].values
 y = data["y"].values
 
 nn2 = NeuralNetwork(seed=1, n_layers=4,
-                    n_neurons_per_layer=[2, 10,  100, 1], act_funcs=['sigmoid', 'sigmoid', 'sigmoid', 'sigmoid'],
+                    n_neurons_per_layer=[1, 100,  100, 1], act_funcs=['relu', 'relu', 'relu', 'linear'],
                     bias=True, problem='regression')
 
 for layer in nn2.layers:
     print(layer.name, layer.input_dim, layer.output_dim)
 
 nn2.train(X.T, y, 2000, 0.7)
+
+data = pd.read_csv('../data/regression/data.activation.test.100.csv')
+X = data[["x"]].values
+y = data['y'].values
+
+y_hat = nn2.predict(X.T)
