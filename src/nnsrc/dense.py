@@ -86,8 +86,6 @@ class NeuralNetwork:
             else:
                 raise Exception('Non-supported activation function')
 
-
-
         def forward_propagation(self, A_prev):
             Z_curr = np.dot(self.weights, A_prev) + self.bias[:, np.newaxis]
             return self.activation(Z_curr), Z_curr  # vectors
@@ -107,6 +105,10 @@ class NeuralNetwork:
 
             return dA_prev, dW_curr, db_curr
 
+        def update_weights(self, dW, db, alpha):
+            self.weights -= alpha * dW
+            self.bias -= (alpha * db).reshape(self.bias.shape)
+
     def full_forward_propagation(self, X):
         cache = {}
         A_curr = X
@@ -120,7 +122,6 @@ class NeuralNetwork:
             cache["Z" + str(i)] = Z_curr
 
         return A_curr, cache
-
 
     def full_backward_propagation(self, Y_hat, Y, cache):
         grads_values = {}
@@ -147,7 +148,7 @@ class NeuralNetwork:
     def predict(self):
         pass
 
-    def train(self, X, Y, epochs, alpha=None, beta=None):
+    def train(self, X, Y, epochs, alpha=0.01, beta=None):
         cost_history = []
         accuracy_history = []
 
@@ -158,9 +159,18 @@ class NeuralNetwork:
             cost = NeuralNetwork.get_cost_value(Y_hat, Y)
             cost_history.append(cost)
             accuracy = NeuralNetwork.get_accuracy_value(Y_hat, Y)
+            print(accuracy)
             accuracy_history.append(accuracy)
             grads_values = self.full_backward_propagation(Y_hat, Y, cache)
 
+            self.update(grads_values, alpha)
+
+    def update(self, grads_values, alpha):
+        # we are not updating input layer (W0) weights
+        for i, layer in enumerate(self.layers):
+            if i == 0:
+                continue
+            layer.update_weights(grads_values["dW" + str(i)], grads_values["db" + str(i)], alpha)
 
     @staticmethod
     def sigmoid(Z):
@@ -204,9 +214,27 @@ class NeuralNetwork:
         return (Y_hat_ == Y).all(axis=0).mean()
 
 #%%
-nn = NeuralNetwork(seed=1, n_layers=3,
-                   n_neurons_per_layer=[2, 4, 1], act_funcs=['sigmoid', 'sigmoid', 'sigmoid'], bias=True, n_batch=32,
-                   n_epochs=10, alpha=0.007, beta=0.9, problem='classification')
+# TODO: learning rate, epochs etc should given in constructor
+# nn = NeuralNetwork(seed=1, n_layers=3,
+#                    n_neurons_per_layer=[2, 4, 1], act_funcs=['sigmoid', 'sigmoid', 'sigmoid'], bias=True, n_batch=32,
+#                    n_epochs=10, alpha=0.7, beta=0.9, problem='classification')
+# #%%
+# nn.train(np.asanyarray([[0, 1], [0, 2], [1, 0]]).T, np.asanyarray([1, 1, 0]).T.reshape((3, )), epochs=1000, alpha=0.1)
+
+
 #%%
-nn.train(np.asanyarray([[0, 1], [0, 2], [1, 0]]).T, np.asanyarray([1, 1, 0]).T.reshape((3, )), 10)
+data = pd.read_csv('data/raw/data.simple.test.100_modified.csv')
+
+#%%
+X = data[["x", "y"]].values
+y = data["cls"].values
+
+#%%
+nn2 = NeuralNetwork(seed=1, n_layers=4,
+                    n_neurons_per_layer=[2, 10,  100, 1], act_funcs=['sigmoid', 'sigmoid', 'sigmoid', 'sigmoid'],
+                    bias=True, n_batch=32,
+                    n_epochs=10, alpha=0.7, beta=0.9, problem='classification')
+
+#%%
+nn2.train(X.T, y, 1000, 0.007)
 
