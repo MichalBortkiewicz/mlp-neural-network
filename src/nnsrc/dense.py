@@ -6,12 +6,11 @@ class NeuralNetwork:
     """
     Whole network
     """
-    __slots__ = ['seed', 'n_layers', 'n_neurons_per_layer', 'act_funcs',
-                 'bias', 'n_batch', 'n_epochs', 'alpha', 'beta', 'problem', 'layers']
+    __slots__ = ['seed', 'n_layers', 'n_neurons_per_layer',
+                 'act_funcs', 'bias', 'problem', 'layers']
 
-    def __init__(self, seed,  n_layers, n_neurons_per_layer,
-                 act_funcs, bias, n_batch,
-                 n_epochs, alpha, beta, problem):
+    def __init__(self, n_layers, n_neurons_per_layer,
+                 act_funcs, bias=True, problem='classification', seed=17):
         """
 
         :param n_layers: number of layers (in + hidden*x + out)
@@ -29,10 +28,6 @@ class NeuralNetwork:
 
         self.seed = seed
         self.problem = problem
-        self.beta = beta
-        self.alpha = alpha
-        self.n_epochs = n_epochs
-        self.n_batch = n_batch
         self.bias = bias
         self.act_funcs = act_funcs
         self.n_layers = n_layers
@@ -132,7 +127,7 @@ class NeuralNetwork:
         dA_prev = - (np.divide(Y, Y_hat) - np.divide(1 - Y, 1 - Y_hat))
 
         for i, layer in reversed(list(enumerate(self.layers))):
-            if i == 0: # we don't want to update these weights
+            if i == 0:  # we don't want to update these weights
                 break
             dA_curr = dA_prev
 
@@ -213,13 +208,19 @@ class NeuralNetwork:
         Y_hat_ = NeuralNetwork.convert_prob_into_class(Y_hat)
         return (Y_hat_ == Y).all(axis=0).mean()
 
+
+
 #%%
 # TODO: learning rate, epochs etc should given in constructor
-# nn = NeuralNetwork(seed=1, n_layers=3,
-#                    n_neurons_per_layer=[2, 4, 1], act_funcs=['sigmoid', 'sigmoid', 'sigmoid'], bias=True, n_batch=32,
-#                    n_epochs=10, alpha=0.7, beta=0.9, problem='classification')
-# #%%
+nn = NeuralNetwork(seed=1, n_layers=3,
+                   n_neurons_per_layer=[2, 4, 1], act_funcs=['sigmoid', 'sigmoid', 'sigmoid'], bias=True,
+                   # n_neurons_per_layer=[2, 4, 1], act_funcs=['relu', 'relu', 'relu'], bias=True,
+                   problem='classification')
+#%%
 # nn.train(np.asanyarray([[0, 1], [0, 2], [1, 0]]).T, np.asanyarray([1, 1, 0]).T.reshape((3, )), epochs=1000, alpha=0.1)
+# nn.train(np.asanyarray([[0, 1], [0, 2], [1, 0], [-0.2, 1.5]]).T, np.asanyarray([1, 1, 0, 1]).T.reshape((4, )), epochs=100000, alpha=0.01)
+# nn.train(np.asanyarray([[0.2, 0.1], [0.1, 0.7]]).T, np.asanyarray([1, 0]).T.reshape((2, )), epochs=1000, alpha=0.1)
+# nn.train(np.asanyarray([[0.2, 0.1]]).T, np.asanyarray([1]).T.reshape((1, )), epochs=1000, alpha=0.1)
 
 
 #%%
@@ -232,9 +233,8 @@ y = data["cls"].values
 #%%
 nn2 = NeuralNetwork(seed=1, n_layers=4,
                     n_neurons_per_layer=[2, 10,  100, 1], act_funcs=['sigmoid', 'sigmoid', 'sigmoid', 'sigmoid'],
-                    bias=True, n_batch=32,
-                    n_epochs=10, alpha=0.7, beta=0.9, problem='classification')
+                    bias=True, problem='classification')
 
 #%%
-nn2.train(X.T, y, 1000, 0.007)
+nn2.train(X.T, y, 2000, 0.7)
 
