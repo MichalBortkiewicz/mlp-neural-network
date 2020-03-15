@@ -38,7 +38,7 @@ class NeuralNetwork:
 
         for i in range(n_layers):
             output_dim = self.n_neurons_per_layer[i]
-            act_func = self.act_funcs[i]
+            act_func = self.act_funcs[i] if type(self.act_funcs) is list else self.act_funcs
             name = "Dense_" + str(i)
             if i == 0:
                 input_dim = self.n_neurons_per_layer[i]
@@ -72,10 +72,10 @@ class NeuralNetwork:
 
             self.activation = NeuralNetwork.relu
             self.dactivation = NeuralNetwork.relu_backward
-            if self.act_func is "relu":
+            if self.act_func == "relu":
                 self.activation = NeuralNetwork.relu
                 self.dactivation = NeuralNetwork.relu_backward
-            elif self.act_func is "sigmoid":
+            elif self.act_func == "sigmoid":
                 self.activation = NeuralNetwork.sigmoid
                 self.dactivation = NeuralNetwork.sigmoid_backward
             else:
@@ -154,7 +154,7 @@ class NeuralNetwork:
             cost = NeuralNetwork.get_cost_value(Y_hat, Y)
             cost_history.append(cost)
             accuracy = NeuralNetwork.get_accuracy_value(Y_hat, Y)
-            print(accuracy)
+            #print(accuracy)
             accuracy_history.append(accuracy)
             grads_values = self.full_backward_propagation(Y_hat, Y, cache)
 
@@ -212,10 +212,13 @@ class NeuralNetwork:
 
 #%%
 # TODO: learning rate, epochs etc should given in constructor
+"""
 nn = NeuralNetwork(seed=1, n_layers=3,
                    n_neurons_per_layer=[2, 4, 1], act_funcs=['sigmoid', 'sigmoid', 'sigmoid'], bias=True,
                    # n_neurons_per_layer=[2, 4, 1], act_funcs=['relu', 'relu', 'relu'], bias=True,
                    problem='classification')
+"""
+
 #%%
 # nn.train(np.asanyarray([[0, 1], [0, 2], [1, 0]]).T, np.asanyarray([1, 1, 0]).T.reshape((3, )), epochs=1000, alpha=0.1)
 # nn.train(np.asanyarray([[0, 1], [0, 2], [1, 0], [-0.2, 1.5]]).T, np.asanyarray([1, 1, 0, 1]).T.reshape((4, )), epochs=100000, alpha=0.01)
@@ -224,7 +227,7 @@ nn = NeuralNetwork(seed=1, n_layers=3,
 
 
 #%%
-data = pd.read_csv('data/raw/data.simple.test.100_modified.csv')
+data = pd.read_csv('../data/classification/data.simple.test.100.csv')
 
 #%%
 X = data[["x", "y"]].values
@@ -234,6 +237,9 @@ y = data["cls"].values
 nn2 = NeuralNetwork(seed=1, n_layers=4,
                     n_neurons_per_layer=[2, 10,  100, 1], act_funcs=['sigmoid', 'sigmoid', 'sigmoid', 'sigmoid'],
                     bias=True, problem='classification')
+
+for layer in nn2.layers:
+    print(layer.name, layer.input_dim, layer.output_dim)
 
 #%%
 nn2.train(X.T, y, 2000, 0.7)
