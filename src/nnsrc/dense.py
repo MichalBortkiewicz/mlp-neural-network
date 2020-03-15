@@ -129,8 +129,13 @@ class NeuralNetwork:
         m = Y_hat.shape[1]
         Y = Y.reshape(Y_hat.shape)
 
-        # for binary crossentropy (classification) - TODO: modify this step
-        dA_prev = - (np.divide(Y, Y_hat) - np.divide(1 - Y, 1 - Y_hat))
+        # loss function
+        if self.problem == 'classification':
+            dA_prev = NeuralNetwork.bin_crossentr_deriv(Y_hat, Y)
+        elif self.problem == 'regression':
+            dA_prev = NeuralNetwork.l2_loss_deriv(Y_hat, Y)
+        else:
+            raise Exception("Learning problem not known. Only classification and regression are valid options.")
 
         for i, layer in reversed(list(enumerate(self.layers))):
             if i == 0:  # we don't want to update these weights
@@ -211,6 +216,15 @@ class NeuralNetwork:
         dZ = np.array(dA, copy=True)
         return dZ
 
+    @staticmethod
+    def l2_loss_deriv(Y_hat, Y):
+        dl = 2*(Y_hat-Y)
+        return dl
+
+    @staticmethod
+    def bin_crossentr_deriv(Y_hat, Y):
+        dl = - (np.divide(Y, Y_hat) - np.divide(1 - Y, 1 - Y_hat))
+        return dl
 
     # TODO: modify a little bit this methods
     @staticmethod
