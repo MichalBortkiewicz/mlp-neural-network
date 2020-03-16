@@ -62,6 +62,7 @@ class NeuralNetwork:
             self.input_dim = input_dim
             self.use_bias = use_bias
 
+
             if name == 'Dense_0':
                 self.weights = np.eye(input_dim) # input and output dim should be the same in input layer
                 self.bias = np.random.randn(self.output_dim, 1) * 0
@@ -134,6 +135,7 @@ class NeuralNetwork:
             dA_prev = NeuralNetwork.bin_crossentr_deriv(Y_hat, Y)
         elif self.problem == 'regression':
             dA_prev = NeuralNetwork.l2_loss_deriv(Y_hat, Y)
+            #print(dA_prev)
         else:
             raise Exception("Learning problem not known. Only classification and regression are valid options.")
 
@@ -153,27 +155,26 @@ class NeuralNetwork:
 
     def predict(self, X):
         out, cache = self.full_forward_propagation(X)
-        return out
+        return out, cache
 
     def train(self, X, Y, epochs, alpha=0.01, beta=None):
-        cost_history = []
-        accuracy_history = []
+        history = []
 
         for i in range(epochs):
             # step forward
             Y_hat, cache = self.full_forward_propagation(X)
 
             if self.problem == 'regression':
-                pass
+                l2_loss = np.linalg.norm(Y_hat - Y)
+                history.append(l2_loss)
             elif self.problem == 'classification':
                 cost = NeuralNetwork.get_cost_value(Y_hat, Y)
-                cost_history.append(cost)
                 accuracy = NeuralNetwork.get_accuracy_value(Y_hat, Y)
-                #print(accuracy)
-                accuracy_history.append(accuracy)
+                history.append((cost, accuracy))
             grads_values = self.full_backward_propagation(Y_hat, Y, cache)
 
             self.update(grads_values, alpha)
+        return history
 
     def update(self, grads_values, alpha):
         # we are not updating input layer (W0) weights
@@ -206,15 +207,8 @@ class NeuralNetwork:
         return dZ
 
     @staticmethod
-    def relu_backward(dA, Z):
-        dZ = np.array(dA, copy=True)
-        dZ[Z <= 0] = 0
-        return dZ
-
-    @staticmethod
     def linear_backward(dA, Z):
-        dZ = np.array(dA, copy=True)
-        return dZ
+        return dA.copy()
 
     @staticmethod
     def l2_loss_deriv(Y_hat, Y):
@@ -255,7 +249,7 @@ nn = NeuralNetwork(seed=1, n_layers=3,
                    n_neurons_per_layer=[2, 4, 1], act_funcs=['sigmoid', 'sigmoid', 'sigmoid'], bias=True,
                    # n_neurons_per_layer=[2, 4, 1], act_funcs=['relu', 'relu', 'relu'], bias=True,
                    problem='classification')
-"""
+
 
 # nn.train(np.asanyarray([[0, 1], [0, 2], [1, 0]]).T, np.asanyarray([1, 1, 0]).T.reshape((3, )), epochs=1000, alpha=0.1)
 # nn.train(np.asanyarray([[0, 1], [0, 2], [1, 0], [-0.2, 1.5]]).T, np.asanyarray([1, 1, 0, 1]).T.reshape((4, )), epochs=100000, alpha=0.01)
@@ -268,6 +262,7 @@ data = pd.read_csv('../data/classification/data.simple.test.100.csv')
 
 X = data[["x", "y"]].values
 y = data["cls"].values
+y[y==2] = 0
 
 nn2 = NeuralNetwork(seed=1, n_layers=4,
                     n_neurons_per_layer=[2, 10,  100, 1], act_funcs=['sigmoid', 'sigmoid', 'sigmoid', 'sigmoid'],
@@ -276,25 +271,33 @@ nn2 = NeuralNetwork(seed=1, n_layers=4,
 for layer in nn2.layers:
     print(layer.name, layer.input_dim, layer.output_dim)
 
-nn2.train(X.T, y, 2000, 0.7)
+nn2.train(X.T, y, 10000, 0.1)
 
 print("CLASSIFICATION DONE")
 ## regression
 data = pd.read_csv('../data/regression/data.activation.train.100.csv')
 X = data[["x"]].values
 y = data["y"].values
-
+X = (X-X.min())/(X.max()-X.min())
+y = (y-y.min())/(y.max()-y.min())
 nn2 = NeuralNetwork(seed=1, n_layers=4,
-                    n_neurons_per_layer=[1, 100,  100, 1], act_funcs=['relu', 'relu', 'relu', 'linear'],
+                    n_neurons_per_layer=[1, 100,  100, 1], act_funcs='sigmoid',
                     bias=True, problem='regression')
 
 for layer in nn2.layers:
     print(layer.name, layer.input_dim, layer.output_dim)
 
-nn2.train(X.T, y, 2000, 0.7)
+history = nn2.train(X.T, y, 100000, 0.01)
+
+from  matplotlib.pyplot import plot
+plot(history)
 
 data = pd.read_csv('../data/regression/data.activation.test.100.csv')
 X = data[["x"]].values
 y = data['y'].values
+X = (X-X.min())/(X.max()-X.min())
+y = (y-y.min())/(y.max()-y.min())
 
 y_hat = nn2.predict(X.T)
+print(np.linalg.norm(y_hat - y))
+"""
