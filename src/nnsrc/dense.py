@@ -133,8 +133,6 @@ class NeuralNetwork:
 
     def full_backward_propagation(self, Y_hat, Y, cache):
         grads_values = {}
-        m = Y_hat.shape[1]
-        Y = Y.reshape(Y_hat.shape)
 
         # loss function
         if self.problem == 'classification_binary':
@@ -164,6 +162,8 @@ class NeuralNetwork:
 
     def predict(self, X):
         out, cache = self.full_forward_propagation(X)
+        # if self.problem == 'classification':
+        #     out = NeuralNetwork.one_hot_to_label(out)
         return out
 
     def train(self, X, Y, epochs, alpha=0.01, beta=None):
@@ -289,6 +289,12 @@ class NeuralNetwork:
         return (Y_hat_ == Y).all(axis=0).mean()
 
     @staticmethod
+    def one_hot_to_label(Y):
+        Y_one_hot = NeuralNetwork.convert_softmax_into_class(Y)
+        labels = [np.where(r==1)[0][0] for r in Y_one_hot.T]
+        return np.asanyarray(labels)
+
+    @staticmethod
     def get_multiclass_accuracy(Y_hat, Y):
         Y_hat_one_hot = NeuralNetwork.convert_softmax_into_class(Y_hat)
         Y_one_hot = np.swapaxes(np.eye(np.max(Y) + 1)[Y], 0, 1)
@@ -305,44 +311,44 @@ class NeuralNetwork:
 
 
 ## classification_binary
-data = pd.read_csv('../data/classification/data.simple.test.100.csv')
-
-X = data[["x", "y"]].values
-y = data["cls"].values
-
-nn = NeuralNetwork(seed=1, n_layers=4,
-                    n_neurons_per_layer=[2, 10,  100, 1], act_funcs=['sigmoid', 'sigmoid', 'sigmoid', 'sigmoid'],
-                    bias=True, problem='classification_binary')
-
-for layer in nn.layers:
-    print(layer.name, layer.input_dim, layer.output_dim)
-
-y = y-1  # for binary crossentropy
-nn.train(X.T, y, 20000, 0.7)
-
-print("CLASSIFICATION DONE")
-y_hat = nn.predict(X.T)
-
-
-## classification
-data = pd.read_csv('../data/classification/data.three_gauss.train.500.csv')
-
-X = data[["x", "y"]].values
-y = data["cls"].values
-
-nn2 = NeuralNetwork(seed=1, n_layers=4,
-                    n_neurons_per_layer=[2, 10,  100, 3], act_funcs=['sigmoid', 'sigmoid', 'sigmoid', 'softmax'],
-                    bias=True, problem='classification')
-
-
-for layer in nn2.layers:
-    print(layer.name, layer.input_dim, layer.output_dim)
-
-y = y-1
-nn2.train(X.T, y, 2000, 0.7)
-
-print("CLASSIFICATION DONE")
-y_hat = nn2.predict(X.T)
+# data = pd.read_csv('../data/classification/data.simple.test.100.csv')
+#
+# X = data[["x", "y"]].values
+# y = data["cls"].values
+#
+# nn = NeuralNetwork(seed=1, n_layers=4,
+#                     n_neurons_per_layer=[2, 10,  100, 1], act_funcs=['sigmoid', 'sigmoid', 'sigmoid', 'sigmoid'],
+#                     bias=True, problem='classification_binary')
+#
+# for layer in nn.layers:
+#     print(layer.name, layer.input_dim, layer.output_dim)
+#
+# y = y-1  # for binary crossentropy
+# nn.train(X.T, y, 20000, 0.7)
+#
+# print("CLASSIFICATION DONE")
+# y_hat = nn.predict(X.T)
+#
+#
+# ## classification
+# data = pd.read_csv('../data/classification/data.three_gauss.train.500.csv')
+#
+# X = data[["x", "y"]].values
+# y = data["cls"].values
+#
+# nn2 = NeuralNetwork(seed=1, n_layers=4,
+#                     n_neurons_per_layer=[2, 10,  100, 3], act_funcs=['sigmoid', 'sigmoid', 'sigmoid', 'softmax'],
+#                     bias=True, problem='classification')
+#
+#
+# for layer in nn2.layers:
+#     print(layer.name, layer.input_dim, layer.output_dim)
+#
+# y = y-1
+# nn2.train(X.T, y, 2000, 0.7)
+#
+# print("CLASSIFICATION DONE")
+# y_hat = nn2.predict(X.T)
 
 
 ## regression
