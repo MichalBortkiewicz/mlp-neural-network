@@ -150,11 +150,12 @@ class NeuralNetwork:
             if i == 0:  # we don't want to update these weights
                 break
             dA_curr = dA_prev
-
             A_prev = cache["A" + str(i-1)]
             Z_curr = cache["Z" + str(i)]
 
             dA_prev, dW_curr, db_curr = layer.backward_propagation(dA_curr, Z_curr, A_prev)
+            grads_values["dA_curr" + str(i)] = dA_curr-
+            grads_values["dA_prev" + str(i)] = dA_prev
             grads_values["dW" + str(i)] = dW_curr
             grads_values["db" + str(i)] = db_curr
 
@@ -166,7 +167,7 @@ class NeuralNetwork:
         #     out = NeuralNetwork.one_hot_to_label(out)
         return out
 
-    def train(self, X, Y, epochs, alpha=0.01, beta=None):
+    def train(self, X, Y, epochs, alpha=0.01, beta=None, full_history=False):
         # asserts
         if self.problem == 'classification_binary':
             assert NeuralNetwork.is_binary(Y), "Y values are not binary"
@@ -175,14 +176,20 @@ class NeuralNetwork:
         elif self.problem == 'regression':
             pass
 
-        self.history = {'cost': [], 'metrics': []}
+        self.history = {'cost': [], 'metrics': [],
+                        'grads': [],
+                        'caches': [],
+                        'weights': [],
+                        'biases': []}
+
 
         for i in range(epochs):
             # forward
             Y_hat, cache = self.full_forward_propagation(X)
 
             if self.problem == 'regression':
-                pass
+                self.history['cost'].append(NeuralNetwork.l2_loss_deriv(Y_hat, Y))
+                self.history['metrics'].append(NeuralNetwork.l2_loss(Y_hat, Y))
             elif self.problem == 'classification_binary':
                 self.history['cost'].append(NeuralNetwork.binary_cross_entropy_cost(Y_hat, Y))
                 self.history['metrics'].append(NeuralNetwork.get_binary_accuracy_value(Y_hat, Y))
@@ -192,8 +199,13 @@ class NeuralNetwork:
 
             # backward
             grads_values = self.full_backward_propagation(Y_hat, Y, cache)
-
+            if full_history:
+                self.history['grads'].append(grads_values)
+                self.history['caches'].append(cache)
+                self.history['weights'].append([l.weights.copy() for l in self.layers])
+                self.history['biases'].append([l.bias.copy() for l in self.layers])
             self.update(grads_values, alpha)
+        return self.history
 
     def update(self, grads_values, alpha):
         # we are not updating input layer (W0) weights
@@ -240,11 +252,25 @@ class NeuralNetwork:
 
     @staticmethod
     def linear_backward(dA, Z):
-        return dA.copy()
+        dZ = np.array(dA, copy=True)
+        return dZ
+
+    @staticmethod
+    def l2_loss(Y_hat, Y):
+        return np.linalg.norm(Y_hat-Y)
 
     @staticmethod
     def l2_loss_deriv(Y_hat, Y):
-        dl = 2*(Y_hat-Y)
+        dl = (Y_hat-Y)
+        return dl
+
+    @staticmethod
+    def l1_loss(Y_hat, Y):
+        return np.linalg.norm(Y_hat - Y, 1)
+
+    @staticmethod
+    def l1_loss_deriv(Y_hat, Y):
+        dl = (Y_hat - Y)
         return dl
 
     @staticmethod
