@@ -302,7 +302,7 @@ class NeuralNetwork:
                 return True
         return False
 
-
+"""
 
 ## classification_binary
 data = pd.read_csv('../data/classification/data.simple.test.100.csv')
@@ -343,7 +343,7 @@ nn2.train(X.T, y, 2000, 0.7)
 
 print("CLASSIFICATION DONE")
 y_hat = nn2.predict(X.T)
-
+"""
 
 ## regression
 # data = pd.read_csv('../data/regression/data.activation.train.100.csv')
