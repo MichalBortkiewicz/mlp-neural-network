@@ -133,6 +133,8 @@ class NeuralNetwork:
 
     def full_backward_propagation(self, Y_hat, Y, cache):
         grads_values = {}
+        m = Y_hat.shape[1]
+        Y = Y.reshape(Y_hat.shape)
 
         # loss function
         if self.problem == 'classification_binary':
@@ -237,15 +239,8 @@ class NeuralNetwork:
         return dZ
 
     @staticmethod
-    def relu_backward(dA, Z):
-        dZ = np.array(dA, copy=True)
-        dZ[Z <= 0] = 0
-        return dZ
-
-    @staticmethod
     def linear_backward(dA, Z):
-        dZ = np.array(dA, copy=True)
-        return dZ
+        return dA.copy()
 
     @staticmethod
     def l2_loss_deriv(Y_hat, Y):
