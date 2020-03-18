@@ -52,7 +52,11 @@ class NeuralNetwork:
         """
         Dense (MLP) layer
         """
-        __slots__ = ['input_dim', 'output_dim', 'act_func', 'name', 'weights', 'bias', 'activation', 'dactivation', 'use_bias']
+        __slots__ = ['input_dim', 'output_dim', 'act_func', 'name',
+                     'weights', 'bias', 'activation', 'dactivation',
+                     'use_bias', 'V_dW', 'V_db']
+
+
 
         def __init__(self, input_dim, output_dim, act_func, name, use_bias=True):
 
@@ -62,6 +66,8 @@ class NeuralNetwork:
             self.output_dim = output_dim
             self.input_dim = input_dim
             self.use_bias = use_bias
+            self.V_dW = 0
+            self.V_db = 0
 
             if name == 'Dense_0':
                 self.weights = np.eye(input_dim) # input and output dim should be the same in input layer
@@ -114,9 +120,14 @@ class NeuralNetwork:
             return dA_prev, dW_curr, db_curr
 
         def update_weights(self, dW, db, alpha, beta):
-            self.weights -= alpha * dW
-            self.bias -= (alpha * db).reshape(self.bias.shape)
-            # TODO: add momentum
+            if 1 > beta > 0:
+                self.V_dW = beta * self.V_dW + (1 - beta) * dW
+                self.V_db = beta * self.V_db + (1 - beta) * db
+                self.weights -= alpha * self.V_dW
+                self.bias -= (alpha * self.V_db).reshape(self.bias.shape)
+
+            # self.weights -= alpha * dW
+            # self.bias -= (alpha * db).reshape(self.bias.shape)
 
     def full_forward_propagation(self, X):
         cache = {}
@@ -168,7 +179,7 @@ class NeuralNetwork:
         #     out = NeuralNetwork.one_hot_to_label(out)
         return out
 
-    def train(self, X, Y, epochs, alpha=0.01, beta=0.5, full_history=False):
+    def train(self, X, Y, epochs, alpha=0.01, beta=0.9, full_history=False):
         # asserts
         if self.problem == 'classification_binary':
             assert NeuralNetwork.is_binary(Y), "Y values are not binary"
