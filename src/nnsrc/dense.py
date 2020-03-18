@@ -200,8 +200,8 @@ class NeuralNetwork:
             Y_hat, cache = self.full_forward_propagation(X)
 
             if self.problem == 'regression':
-                self.history['cost'].append(NeuralNetwork.l2_loss_deriv(Y_hat, Y))
-                self.history['metrics'].append(NeuralNetwork.l2_loss(Y_hat, Y))
+                self.history['cost'].append(NeuralNetwork.l2_loss(Y_hat, Y))
+                self.history['metrics'].append(NeuralNetwork.l2_loss(Y_hat, Y))  # TODO: change maybe on mae
             elif self.problem == 'classification_binary':
                 self.history['cost'].append(NeuralNetwork.binary_cross_entropy_cost(Y_hat, Y))
                 self.history['metrics'].append(NeuralNetwork.get_binary_accuracy_value(Y_hat, Y))
