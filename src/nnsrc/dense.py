@@ -113,9 +113,10 @@ class NeuralNetwork:
 
             return dA_prev, dW_curr, db_curr
 
-        def update_weights(self, dW, db, alpha):
+        def update_weights(self, dW, db, alpha, beta):
             self.weights -= alpha * dW
             self.bias -= (alpha * db).reshape(self.bias.shape)
+            # TODO: add momentum
 
     def full_forward_propagation(self, X):
         cache = {}
@@ -166,7 +167,7 @@ class NeuralNetwork:
         #     out = NeuralNetwork.one_hot_to_label(out)
         return out
 
-    def train(self, X, Y, epochs, alpha=0.01, beta=None):
+    def train(self, X, Y, epochs, alpha=0.01, beta=0.5):
         # asserts
         if self.problem == 'classification_binary':
             assert NeuralNetwork.is_binary(Y), "Y values are not binary"
@@ -193,14 +194,14 @@ class NeuralNetwork:
             # backward
             grads_values = self.full_backward_propagation(Y_hat, Y, cache)
 
-            self.update(grads_values, alpha)
+            self.update(grads_values, alpha, beta)
 
-    def update(self, grads_values, alpha):
+    def update(self, grads_values, alpha, beta):
         # we are not updating input layer (W0) weights
         for i, layer in enumerate(self.layers):
             if i == 0:
                 continue
-            layer.update_weights(grads_values["dW" + str(i)], grads_values["db" + str(i)], alpha)
+            layer.update_weights(grads_values["dW" + str(i)], grads_values["db" + str(i)], alpha, beta)
 
 
     @staticmethod
@@ -291,7 +292,7 @@ class NeuralNetwork:
     @staticmethod
     def one_hot_to_label(Y):
         Y_one_hot = NeuralNetwork.convert_softmax_into_class(Y)
-        labels = [np.where(r==1)[0][0] for r in Y_one_hot.T]
+        labels = [np.where(r == 1)[0][0] for r in Y_one_hot.T]
         return np.asanyarray(labels)
 
     @staticmethod
