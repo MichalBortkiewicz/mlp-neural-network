@@ -194,7 +194,6 @@ class NeuralNetwork:
                         'weights': [],
                         'biases': []}
 
-
         for i in range(epochs):
             # forward
             Y_hat, cache = self.full_forward_propagation(X)
