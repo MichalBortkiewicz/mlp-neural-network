@@ -179,7 +179,7 @@ class NeuralNetwork:
         #     out = NeuralNetwork.one_hot_to_label(out)
         return out
 
-    def train(self, X, Y, epochs, alpha=0.01, beta=0.9, full_history=False):
+    def train(self, X, Y, epochs, alpha=0.01, beta=0.9, full_history=False, full_history_freq=1):
         # asserts
         if self.problem == 'classification_binary':
             assert NeuralNetwork.is_binary(Y), "Y values are not binary"
@@ -210,7 +210,7 @@ class NeuralNetwork:
 
             # backward
             grads_values = self.full_backward_propagation(Y_hat, Y, cache)
-            if full_history:
+            if full_history and i % full_history_freq == 0:
                 self.history['grads'].append(grads_values)
                 self.history['caches'].append(cache)
                 self.history['weights'].append([l.weights.copy() for l in self.layers])
