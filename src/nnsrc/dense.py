@@ -143,7 +143,7 @@ class NeuralNetwork:
 
         return A_curr, cache
 
-    def full_backward_propagation(self, Y_hat, Y, cache):
+    def full_backward_propagation(self, Y_hat, Y, cache, n_classes=None):
         grads_values = {}
 
         # loss function
@@ -154,7 +154,7 @@ class NeuralNetwork:
             Y = Y.reshape(Y_hat.shape)
             dA_prev = NeuralNetwork.l2_loss_deriv(Y_hat, Y)
         elif self.problem == 'classification':
-            dA_prev = NeuralNetwork.crossentr_deriv(Y_hat, Y)
+            dA_prev = NeuralNetwork.crossentr_deriv(Y_hat, Y, n_classes)
         else:
             raise Exception("Learning problem not known. Only classification and regression are valid options.")
 
@@ -175,20 +175,17 @@ class NeuralNetwork:
 
     def predict(self, X):
         out, cache = self.full_forward_propagation(X)
-        # if self.problem == 'classification':
-        #     out = NeuralNetwork.one_hot_to_label(out)
         return out
 
     def train(self, X, Y, epochs, batch_size=None, alpha=0.01, beta=0.9, full_history=False, full_history_freq=1):
+        n_classes = None
         # asserts
         if self.problem == 'classification_binary':
             assert NeuralNetwork.is_binary(Y), "Y values are not binary"
         elif self.problem == 'classification':
-            pass
+            n_classes = np.max(Y) + 1  # TODO: this should be defined only once
         elif self.problem == 'regression':
             pass
-
-
 
         self.history = {'cost': [], 'metrics': [],
                         'grads': [],
@@ -223,10 +220,10 @@ class NeuralNetwork:
                     self.history['metrics'].append(NeuralNetwork.get_binary_accuracy_value(Y_hat, Y))
                 elif self.problem == 'classification':
                     self.history['cost'].append(NeuralNetwork.cross_entropy_cost(Y_hat, Y))
-                    self.history['metrics'].append(NeuralNetwork.get_multiclass_accuracy(Y_hat, Y))
+                    self.history['metrics'].append(NeuralNetwork.get_multiclass_accuracy(Y_hat, Y, n_classes))
 
                 # backward
-                grads_values = self.full_backward_propagation(Y_hat, Y, cache)
+                grads_values = self.full_backward_propagation(Y_hat, Y, cache, n_classes)
                 if full_history and i % full_history_freq == 0:
                     self.history['grads'].append(grads_values)
                     self.history['caches'].append(cache)
@@ -310,9 +307,9 @@ class NeuralNetwork:
         return dl
 
     @staticmethod
-    def crossentr_deriv(Y_hat, Y):
+    def crossentr_deriv(Y_hat, Y, n_classes):
         Y_hat = np.clip(Y_hat, 0.001, 0.999)
-        Y_one_hot = np.eye(np.max(Y) + 1)[Y]
+        Y_one_hot = np.eye(n_classes)[Y]
         return Y_hat - Y_one_hot.T
 
     # TODO: modify a little bit this methods
@@ -351,9 +348,11 @@ class NeuralNetwork:
         return np.asanyarray(labels)
 
     @staticmethod
-    def get_multiclass_accuracy(Y_hat, Y):
+    def get_multiclass_accuracy(Y_hat, Y, n_classes=None):
+        if n_classes is None:
+            n_classes = np.max(Y) + 1
         Y_hat_one_hot = NeuralNetwork.convert_softmax_into_class(Y_hat)
-        Y_one_hot = np.swapaxes(np.eye(np.max(Y) + 1)[Y], 0, 1)
+        Y_one_hot = np.swapaxes(np.eye(n_classes)[Y], 0, 1)
         return np.count_nonzero(np.sum(abs(Y_hat_one_hot-Y_one_hot), axis=0) == 0) / Y_hat_one_hot.shape[1]
 
     @staticmethod
@@ -367,23 +366,23 @@ class NeuralNetwork:
 
 
 ## classification_binary
-data = pd.read_csv('../data/classification/data.simple.test.100.csv')
-
-X = data[["x", "y"]].values
-y = data["cls"].values
-
-nn = NeuralNetwork(seed=1, n_layers=4,
-                    n_neurons_per_layer=[2, 10,  100, 1], act_funcs=['sigmoid', 'sigmoid', 'sigmoid', 'sigmoid'],
-                    bias=True, problem='classification_binary')
-
-for layer in nn.layers:
-    print(layer.name, layer.input_dim, layer.output_dim)
-
-y = y-1  # for binary crossentropy
-nn.train(X.T, y, 2000, 32, alpha=0.7)
-
-print("CLASSIFICATION DONE")
-y_hat = nn.predict(X.T)
+# data = pd.read_csv('../data/classification/data.simple.test.100.csv')
+#
+# X = data[["x", "y"]].values
+# y = data["cls"].values
+#
+# nn = NeuralNetwork(seed=1, n_layers=4,
+#                     n_neurons_per_layer=[2, 10,  100, 1], act_funcs=['sigmoid', 'sigmoid', 'sigmoid', 'sigmoid'],
+#                     bias=True, problem='classification_binary')
+#
+# for layer in nn.layers:
+#     print(layer.name, layer.input_dim, layer.output_dim)
+#
+# y = y-1  # for binary crossentropy
+# nn.train(X.T, y, 2000, 32, alpha=0.7)
+#
+# print("CLASSIFICATION DONE")
+# y_hat = nn.predict(X.T)
 #
 #
 # ## classification
@@ -401,7 +400,7 @@ y_hat = nn.predict(X.T)
 #     print(layer.name, layer.input_dim, layer.output_dim)
 #
 # y = y-1
-# nn2.train(X.T, y, 2000, 0.7)
+# nn2.train(X.T, y, 2000, 32, 0.7)
 #
 # print("CLASSIFICATION DONE")
 # y_hat = nn2.predict(X.T)
