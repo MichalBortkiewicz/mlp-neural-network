@@ -56,8 +56,6 @@ class NeuralNetwork:
                      'weights', 'bias', 'activation', 'dactivation',
                      'use_bias', 'V_dW', 'V_db']
 
-
-
         def __init__(self, input_dim, output_dim, act_func, name, use_bias=True):
 
             # TODO: asserts
@@ -179,19 +177,17 @@ class NeuralNetwork:
 
     def train(self, X, Y, epochs, batch_size=None, alpha=0.01, beta=0.9, full_history=False, full_history_freq=1):
         n_classes = None
+
         # asserts
         if self.problem == 'classification_binary':
             assert NeuralNetwork.is_binary(Y), "Y values are not binary"
         elif self.problem == 'classification':
+            assert np.min(Y) == 0, "There should be classes starting with 0 in multiclass classification problem"
             n_classes = np.max(Y) + 1  # TODO: this should be defined only once
         elif self.problem == 'regression':
             pass
 
-        self.history = {'cost': [], 'metrics': [],
-                        'grads': [],
-                        'caches': [],
-                        'weights': [],
-                        'biases': []}
+        self.history = {'cost': [], 'metrics': [], 'grads': [], 'caches': [], 'weights': [], 'biases': []}
 
         # for batch training
         X_true = np.copy(X)
@@ -209,28 +205,18 @@ class NeuralNetwork:
                     else X_true[:, j*batch_size:]  # well these indices should be the same
                 Y = Y_true[j*batch_size:(j+1)*batch_size] if j < n_batches-1 \
                     else Y_true[j*batch_size:]     # but whatever...
+
                 # forward
                 Y_hat, cache = self.full_forward_propagation(X)
-
-                if self.problem == 'regression':
-                    self.history['cost'].append(NeuralNetwork.l2_loss(Y_hat, Y))
-                    self.history['metrics'].append(NeuralNetwork.l2_loss(Y_hat, Y))  # TODO: change maybe on mae
-                elif self.problem == 'classification_binary':
-                    self.history['cost'].append(NeuralNetwork.binary_cross_entropy_cost(Y_hat, Y))
-                    self.history['metrics'].append(NeuralNetwork.get_binary_accuracy_value(Y_hat, Y))
-                elif self.problem == 'classification':
-                    self.history['cost'].append(NeuralNetwork.cross_entropy_cost(Y_hat, Y))
-                    self.history['metrics'].append(NeuralNetwork.get_multiclass_accuracy(Y_hat, Y, n_classes))
+                self.append_history_forward(Y_hat, Y, n_classes)
 
                 # backward
                 grads_values = self.full_backward_propagation(Y_hat, Y, cache, n_classes)
                 if full_history and i % full_history_freq == 0:
-                    self.history['grads'].append(grads_values)
-                    self.history['caches'].append(cache)
-                    self.history['weights'].append([l.weights.copy() for l in self.layers])
-                    self.history['biases'].append([l.bias.copy() for l in self.layers])
-                self.update(grads_values, alpha, beta)
+                    self.append_history_backward(grads_values, cache)
 
+                # weight update
+                self.update(grads_values, alpha, beta)
 
         return self.history
 
@@ -241,6 +227,22 @@ class NeuralNetwork:
                 continue
             layer.update_weights(grads_values["dW" + str(i)], grads_values["db" + str(i)], alpha, beta)
 
+    def append_history_forward(self, Y_hat, Y, n_classes):
+        if self.problem == 'regression':
+            self.history['cost'].append(NeuralNetwork.l2_loss(Y_hat, Y))
+            self.history['metrics'].append(NeuralNetwork.l2_loss(Y_hat, Y))  # TODO: change maybe on mae
+        elif self.problem == 'classification_binary':
+            self.history['cost'].append(NeuralNetwork.binary_cross_entropy_cost(Y_hat, Y))
+            self.history['metrics'].append(NeuralNetwork.get_binary_accuracy_value(Y_hat, Y))
+        elif self.problem == 'classification':
+            self.history['cost'].append(NeuralNetwork.cross_entropy_cost(Y_hat, Y))
+            self.history['metrics'].append(NeuralNetwork.get_multiclass_accuracy(Y_hat, Y, n_classes))
+
+    def append_history_backward(self, grads_values, cache):
+        self.history['grads'].append(grads_values)
+        self.history['caches'].append(cache)
+        self.history['weights'].append([l.weights.copy() for l in self.layers])
+        self.history['biases'].append([l.bias.copy() for l in self.layers])
 
     @staticmethod
     def sigmoid(Z):
@@ -260,11 +262,12 @@ class NeuralNetwork:
         return exps / np.sum(exps, axis=0)
 
     @staticmethod
-    def cross_entropy_cost(X, y):
-        Y = y.reshape((1, y.shape[0]))
+    def cross_entropy_cost(Y_hat, Y):
+        Y_hat = np.clip(Y_hat, 0.001, 0.999)
+        Y = Y.reshape((1, Y.shape[0]))
         m = Y.shape[1]
-        logprobs = np.multiply(np.log(X), Y) + np.multiply((1 - Y), np.log(1 - X))
-        return - np.sum(logprobs) / m
+        logprobs = np.multiply(np.log(Y_hat), Y) + np.multiply((1 - Y), np.log(1 - Y_hat))
+        return -np.sum(logprobs) / m
 
     @staticmethod
     def sigmoid_backward(dA, Z):
@@ -386,24 +389,24 @@ class NeuralNetwork:
 #
 #
 # ## classification
-# data = pd.read_csv('../data/classification/data.three_gauss.train.500.csv')
-#
-# X = data[["x", "y"]].values
-# y = data["cls"].values
-#
-# nn2 = NeuralNetwork(seed=1, n_layers=4,
-#                     n_neurons_per_layer=[2, 10,  100, 3], act_funcs=['sigmoid', 'sigmoid', 'sigmoid', 'softmax'],
-#                     bias=True, problem='classification')
-#
-#
-# for layer in nn2.layers:
-#     print(layer.name, layer.input_dim, layer.output_dim)
-#
-# y = y-1
-# nn2.train(X.T, y, 2000, 32, 0.7)
-#
-# print("CLASSIFICATION DONE")
-# y_hat = nn2.predict(X.T)
+data = pd.read_csv('../data/classification/data.three_gauss.train.500.csv')
+
+X = data[["x", "y"]].values
+y = data["cls"].values
+
+nn2 = NeuralNetwork(seed=1, n_layers=4,
+                    n_neurons_per_layer=[2, 10,  100, 3], act_funcs=['sigmoid', 'sigmoid', 'sigmoid', 'softmax'],
+                    bias=True, problem='classification')
+
+
+for layer in nn2.layers:
+    print(layer.name, layer.input_dim, layer.output_dim)
+
+y = y-1
+nn2.train(X.T, y, 2000, 32, 0.7)
+
+print("CLASSIFICATION DONE")
+y_hat = nn2.predict(X.T)
 
 
 ## regression
