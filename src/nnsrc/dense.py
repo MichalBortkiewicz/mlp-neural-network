@@ -179,7 +179,7 @@ class NeuralNetwork:
         #     out = NeuralNetwork.one_hot_to_label(out)
         return out
 
-    def train(self, X, Y, epochs, alpha=0.01, beta=0.9, full_history=False, full_history_freq=1):
+    def train(self, X, Y, epochs, batch_size=None, alpha=0.01, beta=0.9, full_history=False, full_history_freq=1):
         # asserts
         if self.problem == 'classification_binary':
             assert NeuralNetwork.is_binary(Y), "Y values are not binary"
@@ -188,34 +188,53 @@ class NeuralNetwork:
         elif self.problem == 'regression':
             pass
 
+
+
         self.history = {'cost': [], 'metrics': [],
                         'grads': [],
                         'caches': [],
                         'weights': [],
                         'biases': []}
 
+        # for batch training
+        X_true = np.copy(X)
+        Y_true = np.copy(Y)
+        n_batches = 1
+        if batch_size is not None:
+            assert isinstance(batch_size, int), "batch_size is not an int"
+            assert batch_size <= Y.shape[0], "batch_size larger than training dataset size"
+            n_batches = int(Y.shape[0]/batch_size) + 1 if Y.shape[0] % batch_size != 0 \
+                else int(Y.shape[0]/batch_size)
+
         for i in range(epochs):
-            # forward
-            Y_hat, cache = self.full_forward_propagation(X)
+            for j in range(n_batches):
+                X = X_true[:, j*batch_size:(j+1)*batch_size] if j < n_batches-1 \
+                    else X_true[:, j*batch_size:]  # well these indices should be the same
+                Y = Y_true[j*batch_size:(j+1)*batch_size] if j < n_batches-1 \
+                    else Y_true[j*batch_size:]     # but whatever...
+                # forward
+                Y_hat, cache = self.full_forward_propagation(X)
 
-            if self.problem == 'regression':
-                self.history['cost'].append(NeuralNetwork.l2_loss(Y_hat, Y))
-                self.history['metrics'].append(NeuralNetwork.l2_loss(Y_hat, Y))  # TODO: change maybe on mae
-            elif self.problem == 'classification_binary':
-                self.history['cost'].append(NeuralNetwork.binary_cross_entropy_cost(Y_hat, Y))
-                self.history['metrics'].append(NeuralNetwork.get_binary_accuracy_value(Y_hat, Y))
-            elif self.problem == 'classification':
-                self.history['cost'].append(NeuralNetwork.cross_entropy_cost(Y_hat, Y))
-                self.history['metrics'].append(NeuralNetwork.get_multiclass_accuracy(Y_hat, Y))
+                if self.problem == 'regression':
+                    self.history['cost'].append(NeuralNetwork.l2_loss(Y_hat, Y))
+                    self.history['metrics'].append(NeuralNetwork.l2_loss(Y_hat, Y))  # TODO: change maybe on mae
+                elif self.problem == 'classification_binary':
+                    self.history['cost'].append(NeuralNetwork.binary_cross_entropy_cost(Y_hat, Y))
+                    self.history['metrics'].append(NeuralNetwork.get_binary_accuracy_value(Y_hat, Y))
+                elif self.problem == 'classification':
+                    self.history['cost'].append(NeuralNetwork.cross_entropy_cost(Y_hat, Y))
+                    self.history['metrics'].append(NeuralNetwork.get_multiclass_accuracy(Y_hat, Y))
 
-            # backward
-            grads_values = self.full_backward_propagation(Y_hat, Y, cache)
-            if full_history and i % full_history_freq == 0:
-                self.history['grads'].append(grads_values)
-                self.history['caches'].append(cache)
-                self.history['weights'].append([l.weights.copy() for l in self.layers])
-                self.history['biases'].append([l.bias.copy() for l in self.layers])
-            self.update(grads_values, alpha, beta)
+                # backward
+                grads_values = self.full_backward_propagation(Y_hat, Y, cache)
+                if full_history and i % full_history_freq == 0:
+                    self.history['grads'].append(grads_values)
+                    self.history['caches'].append(cache)
+                    self.history['weights'].append([l.weights.copy() for l in self.layers])
+                    self.history['biases'].append([l.bias.copy() for l in self.layers])
+                self.update(grads_values, alpha, beta)
+
+
         return self.history
 
     def update(self, grads_values, alpha, beta):
@@ -348,23 +367,23 @@ class NeuralNetwork:
 
 
 ## classification_binary
-# data = pd.read_csv('../data/classification/data.simple.test.100.csv')
-#
-# X = data[["x", "y"]].values
-# y = data["cls"].values
-#
-# nn = NeuralNetwork(seed=1, n_layers=4,
-#                     n_neurons_per_layer=[2, 10,  100, 1], act_funcs=['sigmoid', 'sigmoid', 'sigmoid', 'sigmoid'],
-#                     bias=True, problem='classification_binary')
-#
-# for layer in nn.layers:
-#     print(layer.name, layer.input_dim, layer.output_dim)
-#
-# y = y-1  # for binary crossentropy
-# nn.train(X.T, y, 20000, 0.7)
-#
-# print("CLASSIFICATION DONE")
-# y_hat = nn.predict(X.T)
+data = pd.read_csv('../data/classification/data.simple.test.100.csv')
+
+X = data[["x", "y"]].values
+y = data["cls"].values
+
+nn = NeuralNetwork(seed=1, n_layers=4,
+                    n_neurons_per_layer=[2, 10,  100, 1], act_funcs=['sigmoid', 'sigmoid', 'sigmoid', 'sigmoid'],
+                    bias=True, problem='classification_binary')
+
+for layer in nn.layers:
+    print(layer.name, layer.input_dim, layer.output_dim)
+
+y = y-1  # for binary crossentropy
+nn.train(X.T, y, 2000, 32, alpha=0.7)
+
+print("CLASSIFICATION DONE")
+y_hat = nn.predict(X.T)
 #
 #
 # ## classification
