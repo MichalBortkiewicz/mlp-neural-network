@@ -259,7 +259,7 @@ class NeuralNetwork:
         # TODO: clean it up
         if self.problem == 'regression':
             self.history['cost'].append(self.error_function(Y_hat, Y))
-            self.history['metrics'].append(1)  # TODO: change to mae
+            self.history['metrics'].append(self.r2_metric(Y_hat, Y))
         elif self.problem == 'classification_binary':
             self.history['cost'].append(self.error_function(Y_hat, Y))
             self.history['metrics'].append(NeuralNetwork.binary_accuracy(Y_hat, Y))
@@ -324,6 +324,12 @@ class NeuralNetwork:
     # endregion
 
     @staticmethod
+    def r2_metric(Y_hat, Y):
+        pred = Y_hat.reshape(-1,1)
+        true = Y.reshape(-1,1)
+        return (1 - np.linalg.norm(pred - true) / (np.linalg.norm(true.mean() - true)))
+
+    @staticmethod
     def l2_loss(Y_hat, Y):
         return np.linalg.norm(Y_hat-Y)
 
@@ -338,7 +344,7 @@ class NeuralNetwork:
 
     @staticmethod
     def l1_loss_deriv(Y_hat, Y):
-        dl = (Y_hat - Y)
+        dl = np.sign(Y_hat - Y)
         return dl
 
     @staticmethod

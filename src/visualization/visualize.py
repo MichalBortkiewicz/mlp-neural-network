@@ -52,7 +52,7 @@ def scale_value(val, min_val, max_val, min_scaled_val=0, max_scaled_val=1):
 
 
 def ann_viz(model, cache, weights, biases, grads, sample_id, view=True, filename="network.gv",
-                         title="My Neural Network", format='svg', color_by_value=True):
+                         title="My Neural Network", format='svg', color_by_value=True, color_by_gradient=False):
     nn_per_layer = model.n_neurons_per_layer
 
     g = Digraph('ANN', filename=filename, format=format)
@@ -67,8 +67,8 @@ def ann_viz(model, cache, weights, biases, grads, sample_id, view=True, filename
     EDGE_MIN_WIDHT = 0.1
     EDGE_MAX_WIDHT = 3
 
-    w_max = output_max = input_max = -np.inf
-    w_min = output_min = input_min = np.inf
+    dA_max = dw_max = w_max = output_max = input_max = -np.inf
+    dA_min = dw_min = w_min = output_min = input_min = np.inf
     for i in range(len(nn_per_layer)):
         input = cache['Z'+str(i)]
         w = weights[i]
@@ -79,6 +79,14 @@ def ann_viz(model, cache, weights, biases, grads, sample_id, view=True, filename
         w_min = min(w.min(), w_min)
         output_max = max(output.max(), output_max)
         output_min = min(output.min(), output_min)
+        if i>0:
+            dA = grads['dA_curr'+str(i)]
+            dA_max = max(dA.max(), dA_max)
+            dA_min = min(dA.min(), dA_min)
+            dw = grads['dW'+str(i)]
+            dw_max = max(dw.max(), dw_max)
+            dw_min = min(dw.min(), dw_min)
+
 
     for i in range(0, len(nn_per_layer)):
         layer_act_func = model.layers[i].act_func
@@ -116,7 +124,12 @@ def ann_viz(model, cache, weights, biases, grads, sample_id, view=True, filename
                 node_output = cache['A' + str(i)][j][sample_id]
                 node_tooltip = f"b: {b}\nact_func: {layer_act_func}\ni: {node_input}\no: {node_output}\n\nbackward pass:\ndb: {db}\ndAcurr: {dAcurr}"
                 if color_by_value:
-                    node_color = value_to_color(node_output, output_min, output_max, NODE_MIN_VAL_COLOR, NODE_MAX_VAL_COLOR)
+                    if color_by_gradient and i>0:
+                        node_color = value_to_color(dAcurr, dA_min, dA_max, NODE_MIN_VAL_COLOR,
+                                                    NODE_MAX_VAL_COLOR)
+
+                    else:
+                        node_color = value_to_color(node_output, output_min, output_max, NODE_MIN_VAL_COLOR, NODE_MAX_VAL_COLOR)
                 c.node(str(i) + ',' + str(j), tooltip=node_tooltip,
                        shape="circle", style="filled", fillcolor=node_color, fontcolor=node_color, color='black')
                 if i != 0:
@@ -126,8 +139,11 @@ def ann_viz(model, cache, weights, biases, grads, sample_id, view=True, filename
                         dw = grads['dW'+str(i)][j][h]
                         edge_tooltip = f"w: {w}\nbefore: {node_before_output}\nafter: {w*node_before_output}\n\nbackward pass:\ndw: {dw}"
                         if color_by_value:
-                            edge_color = value_to_color(w, w_min, w_max, NODE_MIN_VAL_COLOR, NODE_MAX_VAL_COLOR)
-                            edge_width = scale_value(np.abs(w), 0, max(np.abs(w_min), np.abs(w_max)), EDGE_MIN_WIDHT, EDGE_MAX_WIDHT)
+                            if color_by_gradient:
+                                edge_color = value_to_color(dw, dw_min, dw_max, NODE_MIN_VAL_COLOR, NODE_MAX_VAL_COLOR)
+                            else:
+                                edge_color = value_to_color(w, w_min, w_max, NODE_MIN_VAL_COLOR, NODE_MAX_VAL_COLOR)
+                        edge_width = scale_value(np.abs(w), 0, max(np.abs(w_min), np.abs(w_max)), EDGE_MIN_WIDHT, EDGE_MAX_WIDHT)
                         g.edge(str(i - 1) + ',' + str(h), str(i) + ',' + str(j), tooltip=edge_tooltip, penwidth=str(edge_width), color=edge_color)
             last_layer_nodes = nn_per_layer[i]
 
