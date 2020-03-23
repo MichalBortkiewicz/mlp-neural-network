@@ -19,7 +19,8 @@ class NeuralNetwork:
                     self.error_function = NeuralNetwork.binary_cross_entropy
                     self.error_function_deriv = NeuralNetwork.binary_crossentr_deriv
                 elif error_function == "hinge":
-                    pass
+                    self.error_function = NeuralNetwork.hinge
+                    self.error_function_deriv = NeuralNetwork.hinge_deriv
                 else:
                     raise Exception("Error function not know.")
             elif self.problem == 'regression':
@@ -145,9 +146,6 @@ class NeuralNetwork:
                 self.weights -= alpha * self.V_dW
                 self.bias -= (alpha * self.V_db).reshape(self.bias.shape)
 
-            # self.weights -= alpha * dW
-            # self.bias -= (alpha * db).reshape(self.bias.shape)
-
     def full_forward_propagation(self, X):
         cache = {}
         A_curr = X
@@ -202,7 +200,8 @@ class NeuralNetwork:
 
         # region asserts
         if self.problem == 'classification_binary':
-            assert NeuralNetwork.is_binary(Y), "Y values are not binary"
+            if self.error_function == 'hinge':
+                assert NeuralNetwork.is_binary(Y), "Y values are not binary"
         elif self.problem == 'classification':
             assert np.min(Y) == 0, "There should be classes starting with 0 in multiclass classification problem"
             n_classes = np.max(Y) + 1
@@ -215,12 +214,14 @@ class NeuralNetwork:
         # for batch training
         X_true = np.copy(X)
         Y_true = np.copy(Y)
-        n_batches = 1
         if batch_size is not None:
             assert isinstance(batch_size, int), "batch_size is not an int"
             assert batch_size <= Y.shape[0], "batch_size larger than training dataset size"
             n_batches = int(Y.shape[0]/batch_size) + 1 if Y.shape[0] % batch_size != 0 \
                 else int(Y.shape[0]/batch_size)
+        else:
+            n_batches = 1
+            batch_size = Y.shape[0]
 
         for i in range(epochs):
             for j in range(n_batches):
@@ -275,7 +276,7 @@ class NeuralNetwork:
     # region activation functions
     @staticmethod
     def tanh(Z):
-        return 2/(1 + np.exp(-2*Z)) - 1
+        return 2 / (1 + np.exp(-2*Z)) - 1
 
     @staticmethod
     def sigmoid(Z):
@@ -341,6 +342,16 @@ class NeuralNetwork:
         return dl
 
     @staticmethod
+    def hinge(Y_hat, Y):
+        Y_hat = np.clip(Y_hat, 0.001, 0.999)
+        return np.sum((np.maximum(0, 1 - Y_hat * Y)) / Y_hat.size)
+
+    @staticmethod
+    def hinge_deriv(Y_hat, Y):
+        Y_hat = np.clip(Y_hat, 0.001, 0.999)
+        return np.where(Y_hat * Y < 1, -Y / Y_hat.size, 0)
+
+    @staticmethod
     def binary_crossentr_deriv(Y_hat, Y):
         Y_hat = np.clip(Y_hat, 0.001, 0.999)
         dl = - (np.divide(Y, Y_hat) - np.divide(1 - Y, 1 - Y_hat))
@@ -355,17 +366,14 @@ class NeuralNetwork:
     # TODO: modify a little bit this methods
     @staticmethod
     def binary_cross_entropy(Y_hat, Y):
-        # number of examples
         Y_hat = np.clip(Y_hat, 0.001, 0.999)
         m = Y_hat.shape[1]
-        # calculation of the cost according to the formula
         cost = -1 / m * (np.dot(Y, np.log(Y_hat).T) + np.dot(1 - Y, np.log(1 - Y_hat).T))
         return np.squeeze(cost)
 
     @staticmethod
     def cross_entropy(Y_hat, Y, n_classes):
         Y_hat = np.clip(Y_hat, 0.001, 0.999)
-        # Y = Y.reshape((1, Y.shape[0]))
         m = Y_hat.shape[1]
         Y_one_hot = np.eye(n_classes)[Y]
         # logprobs = np.dot(Y_one_hot, np.log(Y_hat)) + np.dot((1 - Y_one_hot), np.log((1 - Y_hat)))  # What is wrong with it???
@@ -417,25 +425,50 @@ class NeuralNetwork:
 
 
 ## classification_binary
-data = pd.read_csv('../data/classification/data.simple.test.100.csv')
-
-X = data[["x", "y"]].values
-y = data["cls"].values
-
-nn = NeuralNetwork(seed=1, n_layers=4,
-                    n_neurons_per_layer=[2, 10,  100, 1], act_funcs=['sigmoid', 'sigmoid', 'sigmoid', 'sigmoid'],
-                    bias=True, problem='classification_binary')
-
-for layer in nn.layers:
-    print(layer.name, layer.input_dim, layer.output_dim)
-
-y = y-1  # for binary crossentropy
-nn.train(X.T, y, 2000, 32, alpha=0.7)
-
-print("CLASSIFICATION DONE")
-y_hat = nn.predict(X.T)
+# data = pd.read_csv('../data/classification/data.simple.test.100.csv')
+#
+# X = data[["x", "y"]].values
+# y = data["cls"].values
+#
+# nn = NeuralNetwork(seed=1, n_layers=4,
+#                     n_neurons_per_layer=[2, 10,  100, 1], act_funcs=['sigmoid', 'sigmoid', 'sigmoid', 'sigmoid'],
+#                     bias=True, problem='classification_binary')
+#
+# for layer in nn.layers:
+#     print(layer.name, layer.input_dim, layer.output_dim)
+#
+# y = y-1  # for binary crossentropy
+# nn.train(X.T, y, 2000, 32, alpha=0.7)
+#
+# print("CLASSIFICATION DONE")
+# y_hat = nn.predict(X.T)
 #
 #
+
+## classification_binary hinge
+# data = pd.read_csv('../data/classification/data.simple.test.100.csv')
+#
+# X = data[["x", "y"]].values
+# y = data["cls"].values
+#
+# nn = NeuralNetwork(seed=1, n_layers=4,
+#                    n_neurons_per_layer=[2, 10,  100, 1], act_funcs=['sigmoid', 'sigmoid', 'sigmoid', 'tanh'],
+#                    error_function='hinge',
+#                    bias=True, problem='classification_binary')
+#
+# for layer in nn.layers:
+#     print(layer.name, layer.input_dim, layer.output_dim)
+#
+# y = y-1  # for binary crossentropy
+# y[y==0]= -1
+# nn.train(X.T, y, 10000, 32, alpha=0.1)
+#
+# print("CLASSIFICATION DONE")
+# y_hat = nn.predict(X.T)
+#
+#
+
+
 # ## classification
 # data = pd.read_csv('../data/classification/data.three_gauss.train.500.csv')
 #
