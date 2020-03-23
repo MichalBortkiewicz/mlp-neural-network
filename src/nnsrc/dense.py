@@ -199,6 +199,8 @@ class NeuralNetwork:
             assert batch_size <= Y.shape[0], "batch_size larger than training dataset size"
             n_batches = int(Y.shape[0]/batch_size) + 1 if Y.shape[0] % batch_size != 0 \
                 else int(Y.shape[0]/batch_size)
+        else:
+                batch_size = Y.shape[0]
 
         for i in range(epochs):
             for j in range(n_batches):
