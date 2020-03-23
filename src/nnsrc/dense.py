@@ -89,7 +89,10 @@ class NeuralNetwork:
                 self.dactivation = NeuralNetwork.linear_backward
             elif self.act_func == "softmax":
                 self.activation = NeuralNetwork.stable_softmax
-
+                self.dactivation = NeuralNetwork.stable_softmax_backward
+            elif self.act_func == "tanh":
+                self.activation = NeuralNetwork.tanh
+                self.dactivation = NeuralNetwork.tanh_backward
             else:
                 raise Exception('Non-supported activation function')
 
@@ -103,12 +106,10 @@ class NeuralNetwork:
             m = A_prev.shape[1]
 
             # all based on Andrew "Formulas for computing derivatives"
-            if self.act_func == "softmax":  # TODO: is it all right?
-                dZ_curr = dA_curr
-            else:
-                # act func deriv
-                dZ_curr = self.dactivation(dA_curr, Z_curr)  # TODO: maybe do it more elegant?
-                # weights deriv
+
+            # act func deriv
+            dZ_curr = self.dactivation(dA_curr, Z_curr)
+            # weights deriv
             dW_curr = np.dot(dZ_curr, A_prev.T) / m
             # bias deriv
             db_curr = np.sum(dZ_curr, axis=1, keepdims=True) / m
@@ -250,6 +251,10 @@ class NeuralNetwork:
         self.history['biases'].append([l.bias.copy() for l in self.layers])
 
     @staticmethod
+    def tanh(Z):
+        return 2/(1 + np.exp(-2*Z)) - 1
+
+    @staticmethod
     def sigmoid(Z):
         return 1 / (1 + np.exp(-Z))
 
@@ -265,6 +270,15 @@ class NeuralNetwork:
     def stable_softmax(Z):
         exps = np.exp(Z - np.max(Z))
         return exps / np.sum(exps, axis=0)
+
+    @staticmethod
+    def stable_softmax_backward(dA, Z):
+        dZ = np.array(dA, copy=True)
+        return dZ
+
+    @staticmethod
+    def tanh_backward(dA, Z):
+        return dA * (1 - NeuralNetwork.tanh(Z)**2)
 
     @staticmethod
     def sigmoid_backward(dA, Z):
@@ -328,7 +342,8 @@ class NeuralNetwork:
         # Y = Y.reshape((1, Y.shape[0]))
         m = Y_hat.shape[1]
         Y_one_hot = np.eye(n_classes)[Y]
-        logprobs = np.dot(Y_one_hot, np.log(Y_hat)) + np.dot((1 - Y_one_hot), np.log((1 - Y_hat)))  # What is wrong with it???
+        # logprobs = np.dot(Y_one_hot, np.log(Y_hat)) + np.dot((1 - Y_one_hot), np.log((1 - Y_hat)))  # What is wrong with it???
+        logprobs = np.dot(Y_one_hot, np.log(Y_hat))  # What is wrong with it???
         # logprobs = np.dot(Y_one_hot.T, np.log(Y_hat).T) + np.dot((1 - Y_one_hot).T, np.log(1 - Y_hat).T)
         return -np.sum(logprobs) / m
 
@@ -396,24 +411,24 @@ class NeuralNetwork:
 #
 #
 # ## classification
-# data = pd.read_csv('../data/classification/data.three_gauss.train.500.csv')
-#
-# X = data[["x", "y"]].values
-# y = data["cls"].values
-#
-# nn2 = NeuralNetwork(seed=1, n_layers=4,
-#                     n_neurons_per_layer=[2, 10,  100, 3], act_funcs=['sigmoid', 'sigmoid', 'sigmoid', 'softmax'],
-#                     bias=True, problem='classification')
-#
-#
-# for layer in nn2.layers:
-#     print(layer.name, layer.input_dim, layer.output_dim)
-#
-# y = y-1
-# nn2.train(X.T, y, 2000, 32, 0.07)
-#
-# print("CLASSIFICATION DONE")
-# y_hat = nn2.predict(X.T)
+data = pd.read_csv('../data/classification/data.three_gauss.train.500.csv')
+
+X = data[["x", "y"]].values
+y = data["cls"].values
+
+nn2 = NeuralNetwork(seed=1, n_layers=4,
+                    n_neurons_per_layer=[2, 10,  100, 3], act_funcs=['sigmoid', 'sigmoid', 'sigmoid', 'softmax'],
+                    bias=True, problem='classification')
+
+
+for layer in nn2.layers:
+    print(layer.name, layer.input_dim, layer.output_dim)
+
+y = y-1
+nn2.train(X.T, y, 2000, 32, 0.07)
+
+print("CLASSIFICATION DONE")
+y_hat = nn2.predict(X.T)
 
 
 ## regression
