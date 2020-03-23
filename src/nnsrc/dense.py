@@ -444,31 +444,6 @@ class NeuralNetwork:
 # y_hat = nn.predict(X.T)
 #
 #
-
-## classification_binary hinge
-# data = pd.read_csv('../data/classification/data.simple.test.100.csv')
-#
-# X = data[["x", "y"]].values
-# y = data["cls"].values
-#
-# nn = NeuralNetwork(seed=1, n_layers=4,
-#                    n_neurons_per_layer=[2, 10,  100, 1], act_funcs=['sigmoid', 'sigmoid', 'sigmoid', 'tanh'],
-#                    error_function='hinge',
-#                    bias=True, problem='classification_binary')
-#
-# for layer in nn.layers:
-#     print(layer.name, layer.input_dim, layer.output_dim)
-#
-# y = y-1  # for binary crossentropy
-# y[y==0]= -1
-# nn.train(X.T, y, 10000, 32, alpha=0.1)
-#
-# print("CLASSIFICATION DONE")
-# y_hat = nn.predict(X.T)
-#
-#
-
-
 # ## classification
 # data = pd.read_csv('../data/classification/data.three_gauss.train.500.csv')
 #
