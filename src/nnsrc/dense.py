@@ -7,22 +7,40 @@ class NeuralNetwork:
     Whole network class
     """
     __slots__ = ['seed', 'n_layers', 'n_neurons_per_layer', 'act_funcs',
-                 'bias', 'problem', 'error_function', 'layers', 'history']
+                 'bias', 'problem', 'error_function', 'error_function_deriv', 'layers', 'history']
 
     def __init__(self, n_layers, n_neurons_per_layer, act_funcs,
-                 bias=True, problem='classification', error_function=None, seed=17):
-        """
-
-        :param n_layers: number of layers (in + hidden*x + out)
-        :param n_neurons_per_layer:
-        :param act_func:
-        :param bias:
-        :param n_batch:
-        :param n_epochs:
-        :param alpha:
-        :param beta:
-        :param problem:
-        """
+                 problem='classification', error_function=None, bias=True, seed=17):
+        """Basic Neural Network configuration"""
+        def problem_and_error_function():
+            """Specify problem and error function"""
+            if self.problem == 'classification_binary':
+                if error_function is None or error_function == "binary_cross_entropy":
+                    self.error_function = NeuralNetwork.binary_cross_entropy
+                    self.error_function_deriv = NeuralNetwork.binary_crossentr_deriv
+                elif error_function == "hinge":
+                    pass
+                else:
+                    raise Exception("Error function not know.")
+            elif self.problem == 'regression':
+                if error_function is None or error_function == "l2":
+                    self.error_function = NeuralNetwork.l2_loss
+                    self.error_function_deriv = NeuralNetwork.l2_loss_deriv
+                elif error_function == "l1":
+                    self.error_function = NeuralNetwork.l1_loss
+                    self.error_function_deriv = NeuralNetwork.l1_loss_deriv
+                else:
+                    raise Exception("Error function not know.")
+            elif self.problem == 'classification':
+                if error_function is None or error_function == "cross_entropy":
+                    self.error_function = NeuralNetwork.cross_entropy
+                    self.error_function_deriv = NeuralNetwork.cross_entropy_deriv
+                elif error_function == "sparse_cross_entropy":
+                    pass
+                else:
+                    raise Exception("Error function not know.")
+            else:
+                raise Exception("Learning problem not known. Only classification and regression are valid options.")
 
         # TODO: asserts
 
@@ -36,6 +54,8 @@ class NeuralNetwork:
         self.layers = []
 
         np.random.seed(seed)
+
+        problem_and_error_function()
 
         for i in range(n_layers):
             output_dim = self.n_neurons_per_layer[i]
@@ -76,8 +96,7 @@ class NeuralNetwork:
 
             self.bias = self.bias.reshape((self.bias.shape[0], ))
 
-            self.activation = NeuralNetwork.relu
-            self.dactivation = NeuralNetwork.relu_backward
+            # region activation and deactivation
             if self.act_func == "relu":
                 self.activation = NeuralNetwork.relu
                 self.dactivation = NeuralNetwork.relu_backward
@@ -95,6 +114,7 @@ class NeuralNetwork:
                 self.dactivation = NeuralNetwork.tanh_backward
             else:
                 raise Exception('Non-supported activation function')
+            # endregion
 
         def forward_propagation(self, A_prev):
             Z_curr = np.dot(self.weights, A_prev)
@@ -145,15 +165,16 @@ class NeuralNetwork:
     def full_backward_propagation(self, Y_hat, Y, cache, n_classes=None):
         grads_values = {}
 
+        # TODO: clean it up
         # loss function
         if self.problem == 'classification_binary':
             Y = Y.reshape(Y_hat.shape)
-            dA_prev = NeuralNetwork.bin_crossentr_deriv(Y_hat, Y)
+            dA_prev = self.error_function_deriv(Y_hat, Y)
         elif self.problem == 'regression':
             Y = Y.reshape(Y_hat.shape)
-            dA_prev = NeuralNetwork.l2_loss_deriv(Y_hat, Y)
+            dA_prev = self.error_function_deriv(Y_hat, Y)
         elif self.problem == 'classification':
-            dA_prev = NeuralNetwork.crossentr_deriv(Y_hat, Y, n_classes)
+            dA_prev = self.error_function_deriv(Y_hat, Y, n_classes)
         else:
             raise Exception("Learning problem not known. Only classification and regression are valid options.")
 
@@ -184,7 +205,7 @@ class NeuralNetwork:
             assert NeuralNetwork.is_binary(Y), "Y values are not binary"
         elif self.problem == 'classification':
             assert np.min(Y) == 0, "There should be classes starting with 0 in multiclass classification problem"
-            n_classes = np.max(Y) + 1  # TODO: this should be defined only once
+            n_classes = np.max(Y) + 1
         elif self.problem == 'regression':
             pass
         # endregion
@@ -234,14 +255,15 @@ class NeuralNetwork:
             layer.update_weights(grads_values["dW" + str(i)], grads_values["db" + str(i)], alpha, beta)
 
     def append_history_forward(self, Y_hat, Y, n_classes):
+        # TODO: clean it up
         if self.problem == 'regression':
-            self.history['cost'].append(NeuralNetwork.l2_loss(Y_hat, Y))
-            self.history['metrics'].append(NeuralNetwork.l2_loss(Y_hat, Y))  # TODO: change maybe on mae
+            self.history['cost'].append(self.error_function(Y_hat, Y))
+            self.history['metrics'].append(1)  # TODO: change to mae
         elif self.problem == 'classification_binary':
-            self.history['cost'].append(NeuralNetwork.binary_cross_entropy(Y_hat, Y))
+            self.history['cost'].append(self.error_function(Y_hat, Y))
             self.history['metrics'].append(NeuralNetwork.binary_accuracy(Y_hat, Y))
         elif self.problem == 'classification':
-            self.history['cost'].append(NeuralNetwork.cross_entropy(Y_hat, Y, n_classes))
+            self.history['cost'].append(self.error_function(Y_hat, Y, n_classes))
             self.history['metrics'].append(NeuralNetwork.multiclass_accuracy(Y_hat, Y, n_classes))
 
     def append_history_backward(self, grads_values, cache):
@@ -319,13 +341,13 @@ class NeuralNetwork:
         return dl
 
     @staticmethod
-    def bin_crossentr_deriv(Y_hat, Y):
+    def binary_crossentr_deriv(Y_hat, Y):
         Y_hat = np.clip(Y_hat, 0.001, 0.999)
         dl = - (np.divide(Y, Y_hat) - np.divide(1 - Y, 1 - Y_hat))
         return dl
 
     @staticmethod
-    def crossentr_deriv(Y_hat, Y, n_classes):
+    def cross_entropy_deriv(Y_hat, Y, n_classes):
         Y_hat = np.clip(Y_hat, 0.001, 0.999)
         Y_one_hot = np.eye(n_classes)[Y]
         return Y_hat - Y_one_hot.T
@@ -395,23 +417,23 @@ class NeuralNetwork:
 
 
 ## classification_binary
-# data = pd.read_csv('../data/classification/data.simple.test.100.csv')
-#
-# X = data[["x", "y"]].values
-# y = data["cls"].values
-#
-# nn = NeuralNetwork(seed=1, n_layers=4,
-#                     n_neurons_per_layer=[2, 10,  100, 1], act_funcs=['sigmoid', 'sigmoid', 'sigmoid', 'sigmoid'],
-#                     bias=True, problem='classification_binary')
-#
-# for layer in nn.layers:
-#     print(layer.name, layer.input_dim, layer.output_dim)
-#
-# y = y-1  # for binary crossentropy
-# nn.train(X.T, y, 2000, 32, alpha=0.7)
-#
-# print("CLASSIFICATION DONE")
-# y_hat = nn.predict(X.T)
+data = pd.read_csv('../data/classification/data.simple.test.100.csv')
+
+X = data[["x", "y"]].values
+y = data["cls"].values
+
+nn = NeuralNetwork(seed=1, n_layers=4,
+                    n_neurons_per_layer=[2, 10,  100, 1], act_funcs=['sigmoid', 'sigmoid', 'sigmoid', 'sigmoid'],
+                    bias=True, problem='classification_binary')
+
+for layer in nn.layers:
+    print(layer.name, layer.input_dim, layer.output_dim)
+
+y = y-1  # for binary crossentropy
+nn.train(X.T, y, 2000, 32, alpha=0.7)
+
+print("CLASSIFICATION DONE")
+y_hat = nn.predict(X.T)
 #
 #
 # ## classification
