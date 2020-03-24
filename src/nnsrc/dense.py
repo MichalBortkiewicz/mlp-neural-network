@@ -200,7 +200,7 @@ class NeuralNetwork:
 
         # region asserts
         if self.problem == 'classification_binary':
-            if self.error_function == 'hinge':
+            if self.error_function == 'binary_cross_entropy':
                 assert NeuralNetwork.is_binary(Y), "Y values are not binary"
         elif self.problem == 'classification':
             assert np.min(Y) == 0, "There should be classes starting with 0 in multiclass classification problem"
@@ -382,9 +382,7 @@ class NeuralNetwork:
         Y_hat = np.clip(Y_hat, 0.001, 0.999)
         m = Y_hat.shape[1]
         Y_one_hot = np.eye(n_classes)[Y]
-        # logprobs = np.dot(Y_one_hot, np.log(Y_hat)) + np.dot((1 - Y_one_hot), np.log((1 - Y_hat)))  # What is wrong with it???
         logprobs = np.dot(Y_one_hot, np.log(Y_hat))  # What is wrong with it???
-        # logprobs = np.dot(Y_one_hot.T, np.log(Y_hat).T) + np.dot((1 - Y_one_hot).T, np.log(1 - Y_hat).T)
         return -np.sum(logprobs) / m
 
     @staticmethod
@@ -407,7 +405,7 @@ class NeuralNetwork:
         return (Y_hat_ == Y).all(axis=0).mean()
 
     @staticmethod
-    def one_hot_to_label(Y):
+    def softmax_to_label(Y):
         Y_one_hot = NeuralNetwork.convert_softmax_into_class(Y)
         labels = [np.where(r == 1)[0][0] for r in Y_one_hot.T]
         return np.asanyarray(labels)
